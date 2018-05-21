@@ -2,13 +2,18 @@ package com.blanke.scheduleproject
 
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.app.job.JobInfo
+import android.app.job.JobScheduler
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.widget.Toast
 import kotlinx.android.synthetic.main.activity_main.*
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -19,6 +24,19 @@ class MainActivity : AppCompatActivity() {
         bu_alarm?.setOnClickListener {
             alarm()
         }
+        bu_job?.setOnClickListener {
+            jobService()
+        }
+    }
+
+    private fun jobService() {
+        val builder = JobInfo.Builder(100, ComponentName(this, TestJobService::class.java))
+        builder.setMinimumLatency(1000)
+        builder.setOverrideDeadline(3000)
+//        builder.setPeriodic(3000)
+        val jobScheduler = getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
+        val result = jobScheduler.schedule(builder.build())
+        Log.d("main", "jobScheduler.schedule()=$result")
     }
 
     private fun alarm() {
@@ -33,11 +51,13 @@ class MainActivity : AppCompatActivity() {
         alarmManager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 10000, getTestReceiverIntent())
 
         // > 23 低耗电模式精确
-        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 10000, getTestReceiverIntent())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 10000, getTestReceiverIntent())
+        }
 
         // 重复闹钟
         alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 3000, 5000, getTestReceiverIntent())
-        // 跟省电，会合并闹钟时间，间隔时间可能没那么精准
+        // 更省电，会合并闹钟时间，间隔时间可能没那么精准
         alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 3000, 5000, getTestReceiverIntent())
     }
 
